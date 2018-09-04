@@ -25,6 +25,7 @@ void PrettyTable::initPrettyTable(const char *head[], size_t items)
 	memset(mpiItemLength[miRows], 0, miItems * sizeof(size_t));
 	mArrTableData = (table_item_data_t**)malloc(sizeof(table_item_data_t*)); // 初始申请，表格数据
 	mArrTableData[miRows] = (table_item_data_t*)malloc(miItems * sizeof(table_item_data_t));  // 先多申请一行，不作使用
+	memset(mArrTableData[miRows], 0, miItems * sizeof(table_item_data_t));
 
 	// TODO(tangxuan):表格行数未知，这里先假定15
 	mpData = (void*)malloc( 15 * sizeof(long));  // 用于存储外界输入的字符指针数组地址（转换为整数）
