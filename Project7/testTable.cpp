@@ -42,7 +42,7 @@ int main(void)
 	tb.addRow(CameraMessages);
 
 	tb.printTable("");
-	tb.updateTable(data);
+	//tb.updateTable(data);
 	getchar();
 	return 0;
 }
