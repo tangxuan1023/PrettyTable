@@ -6,7 +6,7 @@
 PrettyTable::PrettyTable(const char *head[], size_t items) :
 	miRows(0), miItems(0),
 	mpiItemLength(NULL),
-	mArrTableData(NULL), 
+	mArrTableData(NULL),
 	mpData(NULL)
 {
 	initPrettyTable(head, items);
@@ -19,16 +19,16 @@ PrettyTable::~PrettyTable()
 
 void PrettyTable::initPrettyTable(const char *head[], size_t items)
 {
+	// TODO(tangxuan):表格数据行数未知，这里先假定15
 	miItems = items;  // 多少个表项，初始化后表的结构也就确定了
-	mpiItemLength = (size_t**)malloc(sizeof(size_t*)); // 初始申请，表项指针长度，4
+	mpiItemLength = (size_t**)malloc(15 * sizeof(size_t*)); // 初始申请，表项指针长度
 	mpiItemLength[miRows] = (size_t *)malloc(miItems * sizeof(size_t)); // 先多申请一行, 备用，参见update
 	memset(mpiItemLength[miRows], 0, miItems * sizeof(size_t));
-	mArrTableData = (table_item_data_t**)malloc(sizeof(table_item_data_t*)); // 初始申请，表格数据
+	mArrTableData = (table_item_data_t**)malloc(15 * sizeof(table_item_data_t*)); // 初始申请，表格数据
 	mArrTableData[miRows] = (table_item_data_t*)malloc(miItems * sizeof(table_item_data_t));  // 先多申请一行，不作使用
 	memset(mArrTableData[miRows], 0, miItems * sizeof(table_item_data_t));
 
-	// TODO(tangxuan):表格行数未知，这里先假定15
-	mpData = (void*)malloc( 15 * sizeof(long));  // 用于存储外界输入的字符指针数组地址（转换为整数）
+	mpData = (void*)malloc(15 * sizeof(long));  // 用于存储外界输入的字符指针数组地址（转换为整数）
 
 	addRow(head);  // 添加表头
 }
@@ -39,9 +39,14 @@ void PrettyTable::unInitPrettyTable()
 		free(mpData);
 		mpData = NULL;
 	}
-	
+
+    // addRowImpl函数中，[0,miRows]范围内均有分配
 	if (mArrTableData) {
-		for (int i = 0; i < miRows; i++) {
+		for (int i = 0; i <= miRows; i++) { 
+			for (int j = 0; j < miItems; j++) {
+				free(mArrTableData[i][j].item_data);
+				mArrTableData[i][j].item_data = NULL;
+			}
 			free(mArrTableData[i]);
 			mArrTableData[i] = NULL;
 		}
@@ -50,7 +55,7 @@ void PrettyTable::unInitPrettyTable()
 	}
 
 	if (mpiItemLength) {
-		for (int i = 0; i < miRows; i++) {
+		for (int i = 0; i <= miRows; i++) {
 			free(mpiItemLength[i]);
 			mpiItemLength[i] = NULL;
 		}
@@ -71,9 +76,10 @@ void PrettyTable::addRow(const char *rowData[])
 void PrettyTable::addRowImpl(const char *rowData[], bool isBoundary)
 {
 	miRows++;
-	mArrTableData =
-		(table_item_data_t**)realloc(mArrTableData, (miRows + 1) * sizeof(table_item_data_t*));
+	//mArrTableData =
+	//	(table_item_data_t**)realloc(mArrTableData, (miRows + 1) * sizeof(table_item_data_t*)); // 异常
 
+	//mpiItemLength = (size_t**)realloc(mArrTableData, (miRows + 1) * sizeof(size_t*)); // 异常
 	// mpiItemLength数组下标从1开始正式使用
 	mpiItemLength[miRows] = (size_t *)malloc(miItems * sizeof(size_t));
 	memset(mpiItemLength[miRows], 0, miItems * sizeof(size_t));
@@ -93,7 +99,7 @@ void PrettyTable::addRowImpl(const char *rowData[], bool isBoundary)
 
 void PrettyTable::showTable()
 {
-	// 拼接数据
+	// 拼接数据，从row = 1 开始使用 
 	for (int row = 1; row < miRows; row++) {
 		const char **rowData = reinterpret_cast<const char **> \
 			(reinterpret_cast<void*>((reinterpret_cast<long*>(mpData))[row]));
@@ -134,7 +140,7 @@ void PrettyTable::showTable()
 				}
 			}
 			else { // 最后一行一定是边界，故 row 不会越界
-				size_t remain = 2 + (mpiItemLength[0][col] - mpiItemLength[row][col] > 0 ? \
+				size_t remain = 2 * sizeof(' ') + (mpiItemLength[0][col] - mpiItemLength[row][col] > 0 ? \
 					mpiItemLength[0][col] - mpiItemLength[row][col] : 0);
 				//printf("len: %u \tremain: %u\n", mpiItemLength[row][col], remain);
 
@@ -190,7 +196,7 @@ void PrettyTable::updateTable(const char *rowData[])
 	}
 
 	/*for (int col = 0; col < miItems; col++) {
-		printf("%d\t", mpiItemLength[0][col]);
+	printf("%d\t", mpiItemLength[0][col]);
 	}*/
 
 	for (int row = 0; row < miRows; row++) {
