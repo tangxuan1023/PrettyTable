@@ -17,6 +17,7 @@ typedef struct _table_item_data_s {
 	//struct _table_item_data_s *next_item;
 } table_item_data_t;
 
+// TODO(tangxuan): 使用动态表（表扩张和收缩）优化，结果需支持写入文件（大流量I/O管理）
 class PrettyTable
 {
 public:
