@@ -9,32 +9,54 @@ PrettyTable::PrettyTable(const string &head) :
 	m_maxItemSize(nullptr)
 {
 	m_tableMat.clear();
+	clearRow();
 
-	initPrettyTable(head);
+	init(head);
 }
 
 PrettyTable::PrettyTable(const PrettyTable &tb)
 {
 	// TODO: implement, copy members
+	this->m_tableMat = tb.m_tableMat;
+	this->m_rows = tb.m_rows;
+	this->m_items = tb.m_items;
+	this->m_maxItemSize = new size_t[this->m_items]();
+	for (int col = 0; col < this->m_items; col++) {
+		this->m_maxItemSize[col] = tb.m_maxItemSize[col];
+	}
 }
 
 PrettyTable& PrettyTable::operator= (const PrettyTable &tb)
 {
 	if (this != &tb) {
 		// TODO: implement, copy members
+		this->m_tableMat = tb.m_tableMat;
+		this->m_rows = tb.m_rows;
+		this->m_items = tb.m_items;
+		this->m_maxItemSize = new size_t[this->m_items]();
+		for (int col = 0; col < this->m_items; col++) {
+			this->m_maxItemSize[col] = tb.m_maxItemSize[col];
+		}
 	}
 	return *this;
 }
 
 PrettyTable::~PrettyTable()
 {
-	unInitPrettyTable();
+	uninit();
 }
 
-TableRow PrettyTable::buildDataRow(const string& _str, char symbol, bool create_empty_item)
+void PrettyTable::clearRow()
+{
+	m_tableRow.isBoundary = false;
+	m_tableRow.items.clear();
+}
+
+TableRow &PrettyTable::buildDataRow(const string& _str, char symbol, bool create_empty_item)
 {
 	string str = getRowDataString(_str);
-	TableRow row;
+	clearRow();
+	TableRow &row = m_tableRow;
 	TableItem item = { "" };
 	string &word = item.word;
 	vector<TableItem> &vec = row.items;
@@ -64,9 +86,10 @@ TableRow PrettyTable::buildDataRow(const string& _str, char symbol, bool create_
 	return row;
 }
 
-TableRow PrettyTable::buildBoundaryRow()
+TableRow &PrettyTable::buildBoundaryRow()
 {
-	TableRow row;
+	clearRow();
+	TableRow &row = m_tableRow;
 	TableItem item = { "" };
 	string &word = item.word;
 	vector<TableItem> &vec = row.items;
@@ -86,7 +109,7 @@ TableRow PrettyTable::buildBoundaryRow()
 	return row;
 }
 
-void PrettyTable::initPrettyTable(const string &head)
+void PrettyTable::init(const string &head)
 {
 	TableRow row = buildDataRow(head, '|', false); // head data row
 	m_items = row.items.size();
@@ -109,9 +132,10 @@ string PrettyTable::getRowDataString(const string &_str)
 	return str;
 }
 
-void PrettyTable::unInitPrettyTable()
+void PrettyTable::uninit()
 {
 	m_tableMat.clear();
+	clearRow();
 
 	if (m_maxItemSize) {
 		delete[] m_maxItemSize;
@@ -123,7 +147,7 @@ void PrettyTable::addRow(TableRow &row)
 {
 	m_rows++;
 	m_tableMat.push_back(row);
-	updateTable();
+	update();
 }
 
 void PrettyTable::addRow(const string &_str)
@@ -134,7 +158,7 @@ void PrettyTable::addRow(const string &_str)
 	row = buildDataRow(str, '|', true); // data row
 
 	m_tableMat.push_back(row);
-	updateTable();
+	update();
 }
 
 void PrettyTable::showTable(FILE *fp)
@@ -175,7 +199,7 @@ void PrettyTable::showTable(FILE *fp)
 	}
 }
 
-void PrettyTable::updateTable()
+void PrettyTable::update()
 {
 	if (m_rows <= 1) return;
 	vector<TableRow>::iterator mat_it = m_tableMat.begin();
@@ -208,9 +232,9 @@ void PrettyTable::printTable(const char *filename)
 	}
 
 	showTable(fp);
+
 	if (filename && fp) {
 		fclose(fp);
 		fp = nullptr;
 	}
-	//TODO: save to file
 }

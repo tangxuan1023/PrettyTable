@@ -8,39 +8,6 @@
 #include <stdio.h>
 using namespace std;
 
-static const char *CameraMessages[] =
-{
-	"ERROR",
-	"SHUTTER",
-	"FOCUS",
-	"ZOOM",
-	"PREVIEW_FRAME",
-	"VIDEO_FRAME",
-	"POSTVIEW_FRAME",
-	"RAW_IMAGE",
-	"COMPRESSED_IMAGE",
-	"RAW_IMAGE_NOTIFY",
-	"PREVIEW_METADATA"
-};
-
-static const char *data[] =
-{
-	"ER",
-	"SHUTTER",
-	"FOC",
-	"ZOO",
-	"PREVIEW_FRAME_teset_ymount",
-	"VIDEO_FRAME",
-	"POSTVIEW_FRAME_mnutnhywgzsfvsaa",
-	"RAW_IMAGE",
-	"COMPRESSED_IMAGE",
-	"RAW_IMAGE_NOTIFY_mauxryenug",
-	"PREVIEW_METADATA"
-};
-//const char *table_name = fopen("./table.txt", "r");
-
-
-
 int main(int argc, char* const argv[])
 {
 	string str = "{task_id|content|begin_date|end_date|status|remark|}";
@@ -55,7 +22,10 @@ int main(int argc, char* const argv[])
 
 	const char *outfile = "./out.txt";
 
-	table.printTable(outfile);
+	//PrettyTable table1(table);
+	PrettyTable table1 = table;
+
+	table1.printTable();
 
 	getchar();
 	return 0;

@@ -41,18 +41,20 @@ public:
 	void printTable(const char *filename=nullptr);
 
 private:
-	void initPrettyTable(const string &head);
-	void unInitPrettyTable();
+	void init(const string &head);
+	void uninit();
 
 	string getRowDataString(const string &str);
 	void addRow(TableRow &row);
-	TableRow buildDataRow(const string& str, char symbol, bool create_empty_item = false);
-	TableRow buildBoundaryRow();
-	void updateTable();
+	TableRow &buildDataRow(const string& str, char symbol, bool create_empty_item = false);
+	TableRow &buildBoundaryRow();
+	void update();
+	void clearRow();
 	void showTable(FILE *fp);
 private:
 	int m_rows;
 	int m_items;
 	size_t *m_maxItemSize;
 	TableMat m_tableMat;
+	TableRow m_tableRow;
 };
