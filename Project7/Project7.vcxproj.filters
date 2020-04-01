@@ -18,12 +18,24 @@
     <ClInclude Include="PrettyTable.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ArgsParser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="basic_defs.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PrettyTable.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="testTable.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ArgsParser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CmdLineTools.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

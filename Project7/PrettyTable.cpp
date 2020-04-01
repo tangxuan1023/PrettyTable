@@ -2,14 +2,28 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <algorithm>
 
-PrettyTable::PrettyTable(const char *head[], size_t items) :
-	miRows(0), miItems(0),
-	mpiItemLength(NULL),
-	mArrTableData(NULL),
-	mpData(NULL)
+PrettyTable::PrettyTable(const string &head) :
+	m_rows(0), m_items(0),
+	m_maxItemSize(nullptr)
 {
-	initPrettyTable(head, items);
+	m_tableMat.clear();
+
+	initPrettyTable(head);
+}
+
+PrettyTable::PrettyTable(const PrettyTable &tb)
+{
+	// TODO: implement, copy members
+}
+
+PrettyTable& PrettyTable::operator= (const PrettyTable &tb)
+{
+	if (this != &tb) {
+		// TODO: implement, copy members
+	}
+	return *this;
 }
 
 PrettyTable::~PrettyTable()
@@ -17,203 +31,186 @@ PrettyTable::~PrettyTable()
 	unInitPrettyTable();
 }
 
-void PrettyTable::initPrettyTable(const char *head[], size_t items)
+TableRow PrettyTable::buildDataRow(const string& _str, char symbol, bool create_empty_item)
 {
-	// TODO(tangxuan):表格数据行数未知，这里先假定15
-	miItems = items;  // 多少个表项，初始化后表的结构也就确定了
-	mpiItemLength = (size_t**)malloc(15 * sizeof(size_t*)); // 初始申请，表项指针长度
-	mpiItemLength[miRows] = (size_t *)malloc(miItems * sizeof(size_t)); // 先多申请一行, 备用，参见update
-	memset(mpiItemLength[miRows], 0, miItems * sizeof(size_t));
-	mArrTableData = (table_item_data_t**)malloc(15 * sizeof(table_item_data_t*)); // 初始申请，表格数据
-	mArrTableData[miRows] = (table_item_data_t*)malloc(miItems * sizeof(table_item_data_t));  // 先多申请一行，不作使用
-	memset(mArrTableData[miRows], 0, miItems * sizeof(table_item_data_t));
+	string str = getRowDataString(_str);
+	TableRow row;
+	TableItem item = { "" };
+	string &word = item.word;
+	vector<TableItem> &vec = row.items;
+	row.isBoundary = false;
 
-	mpData = (void*)malloc(15 * sizeof(long));  // 用于存储外界输入的字符指针数组地址（转换为整数）
+	while (!str.empty()) {
+		if (str[0] == symbol) {
+			if (!word.empty() || create_empty_item) {
+				if (!create_empty_item || vec.size() < m_items) {
+					vec.push_back(item);
+				}
+				word = "";
+			}
+		}
+		else {
+			word = word + str[0];
+		}
+		str = str.substr(1, str.length() - 1);
+	}
 
-	addRow(head);  // 添加表头
+	if (word != "" || create_empty_item) {
+		if (!create_empty_item || vec.size() < m_items) {
+			vec.push_back(item);
+		}
+	}
+
+	return row;
+}
+
+TableRow PrettyTable::buildBoundaryRow()
+{
+	TableRow row;
+	TableItem item = { "" };
+	string &word = item.word;
+	vector<TableItem> &vec = row.items;
+
+	int col = 0;
+	word = '+';
+	while (col < m_items) {
+		string tmp(m_maxItemSize[col], '-');
+		word = word + tmp + '+';
+		vec.push_back(item);
+		col++;
+		word = "";
+	}
+
+	row.isBoundary = true;
+
+	return row;
+}
+
+void PrettyTable::initPrettyTable(const string &head)
+{
+	TableRow row = buildDataRow(head, '|', false); // head data row
+	m_items = row.items.size();
+	m_maxItemSize = new size_t[m_items]();
+
+	vector<TableItem>::iterator it = row.items.begin();
+	for (int col = 0; col < m_items; col++) {
+		TableItem item = *it++;
+		m_maxItemSize[col] = sizeof(' ') + item.word.length() + sizeof(' ');
+	}
+
+	row.isBoundary = false;
+	addRow(row);
+}
+
+string PrettyTable::getRowDataString(const string &_str)
+{
+	string str = _str.substr(1, _str.length() - 2);
+	//printf("Check String: %s\n", str.c_str());
+	return str;
 }
 
 void PrettyTable::unInitPrettyTable()
 {
-	if (mpData) {
-		free(mpData);
-		mpData = NULL;
-	}
+	m_tableMat.clear();
 
-    // addRowImpl函数中，[0,miRows]范围内均有分配
-	if (mArrTableData) {
-		for (int i = 0; i <= miRows; i++) { 
-			for (int j = 0; j < miItems; j++) {
-				free(mArrTableData[i][j].item_data);
-				mArrTableData[i][j].item_data = NULL;
-			}
-			free(mArrTableData[i]);
-			mArrTableData[i] = NULL;
+	if (m_maxItemSize) {
+		delete[] m_maxItemSize;
+		m_maxItemSize = nullptr;
+	}
+}
+
+void PrettyTable::addRow(TableRow &row)
+{
+	m_rows++;
+	m_tableMat.push_back(row);
+	updateTable();
+}
+
+void PrettyTable::addRow(const string &_str)
+{
+	string str = _str;
+	m_rows++;
+	TableRow row;
+	row = buildDataRow(str, '|', true); // data row
+
+	m_tableMat.push_back(row);
+	updateTable();
+}
+
+void PrettyTable::showTable(FILE *fp)
+{
+	TableRow boundaryRow = buildBoundaryRow();
+	vector<TableRow>::iterator mat_it = m_tableMat.begin();
+	for (; mat_it != m_tableMat.end(); mat_it++) {
+		TableRow tableRow = (*mat_it);
+
+		// print top boundary for each row
+		vector<TableItem>::iterator item_it = tableRow.items.begin();
+		int col = 0;
+		for (; item_it != tableRow.items.end(); item_it++) {
+			fprintf(fp, "%s", boundaryRow.items[col].word.c_str());
+			col++;
 		}
-		free(mArrTableData);
-		mArrTableData = NULL;
-	}
+		fprintf(fp, "\n");
 
-	if (mpiItemLength) {
-		for (int i = 0; i <= miRows; i++) {
-			free(mpiItemLength[i]);
-			mpiItemLength[i] = NULL;
+		//print data row
+		item_it = tableRow.items.begin();
+		col = 0;
+		for (; item_it != tableRow.items.end(); item_it++) {
+				if (col == 0) {
+					fprintf(fp, "|");  // left boundary for each row
+				}
+				size_t spaceSize = m_maxItemSize[col] - (*item_it).word.length();
+				string headSpace(spaceSize / 2, ' ');
+				string tailSpace(spaceSize - spaceSize / 2, ' ');
+				fprintf(fp, "%s|", (headSpace +(*item_it).word + tailSpace).c_str());
+			col++;
 		}
-		free(mpiItemLength);
-		mpiItemLength = NULL;
+		fprintf(fp, "\n"); 
+	}
+
+	// print bottom boundary for last row
+	for (int col = 0; col < m_items; col++) {
+		fprintf(fp, "%s", boundaryRow.items[col].word.c_str());
 	}
 }
 
-void PrettyTable::addRow(const char *rowData[])
+void PrettyTable::updateTable()
 {
-	//mpData = (void*)realloc(mpData, (miRows + 1) * sizeof(long));  // 异常
-
-	addRowImpl(rowData, true);   // 添加上边界
-	addRowImpl(rowData, false);  // 添加数据行
-	updateTable(rowData);  // 更新表结构
-}
-
-void PrettyTable::addRowImpl(const char *rowData[], bool isBoundary)
-{
-	miRows++;
-	//mArrTableData =
-	//	(table_item_data_t**)realloc(mArrTableData, (miRows + 1) * sizeof(table_item_data_t*)); // 异常
-
-	//mpiItemLength = (size_t**)realloc(mArrTableData, (miRows + 1) * sizeof(size_t*)); // 异常
-	// mpiItemLength数组下标从1开始正式使用
-	mpiItemLength[miRows] = (size_t *)malloc(miItems * sizeof(size_t));
-	memset(mpiItemLength[miRows], 0, miItems * sizeof(size_t));
-	mArrTableData[miRows] = (table_item_data_t*)malloc(miItems * sizeof(table_item_data_t));  // 每行miItems个节点,由初始化决定
-	memset(mArrTableData[miRows], 0, miItems * sizeof(table_item_data_t));
-
-	(reinterpret_cast<long*>(mpData))[miRows] = reinterpret_cast<long>(reinterpret_cast<void*>(rowData));
-
-	for (int col = 0; col < miItems; col++) {
-		mpiItemLength[miRows][col] = strlen(rowData[col]);
-
-		mArrTableData[miRows][col].isBoundary = isBoundary;
-		mArrTableData[miRows][col].item_size = sizeof('|') + sizeof(' ') \
-			+ mpiItemLength[miRows][col] + sizeof(' ') + sizeof('\0'); // 每个iteam首尾各添一个空格，首部一个'|'，字符串尾部'\0'
-	}
-}
-
-void PrettyTable::showTable()
-{
-	// 拼接数据，从row = 1 开始使用 
-	for (int row = 1; row < miRows; row++) {
-		const char **rowData = reinterpret_cast<const char **> \
-			(reinterpret_cast<void*>((reinterpret_cast<long*>(mpData))[row]));
-
-		for (int col = 0; col < miItems; col++) {
-			size_t boundary_extra = 0;
-			if (col == miItems - 1) {
-				boundary_extra = 1;
+	if (m_rows <= 1) return;
+	vector<TableRow>::iterator mat_it = m_tableMat.begin();
+	mat_it += 1; // excluding head data row
+	for (; mat_it != m_tableMat.end(); mat_it++) {
+		TableRow tableRow = (*mat_it);
+		vector<TableItem>::iterator item_it = tableRow.items.begin();
+		if (!tableRow.isBoundary) {	// assert
+			int col = 0;
+		    for (; item_it != tableRow.items.end(); item_it++) {
+				m_maxItemSize[col] = std::max<size_t>(m_maxItemSize[col], sizeof(' ') + (*item_it).word.length() + sizeof(' '));
+				//printf("%s %zu\n", (*item_it).word.c_str(), (*item_it).word.length());
+				col++;
 			}
-
-			// 每个item单独分配空间，操作保证字符串以'\0'结束
-			// update之后mpiItemLength[0]存储每列最大值
-			mArrTableData[row][col].item_data =
-				(void*)malloc((mArrTableData[row][col].item_size \
-					+ boundary_extra) * sizeof(char));
-
-			if (mArrTableData[row][col].isBoundary) {
-				memset(mArrTableData[row][col].item_data,
-					'-',
-					(mArrTableData[row][col].item_size + boundary_extra) * sizeof(char));
-
-				memcpy((char*)mArrTableData[row][col].item_data,
-					"+",
-					sizeof('+'));
-
-				memcpy((char*)mArrTableData[row][col].item_data \
-					+ sizeof('+') + sizeof(' ') + \
-					mpiItemLength[0][col] * sizeof(char) + sizeof(' '),
-					"\0",
-					sizeof('\0'));
-
-				if (col == miItems - 1) {
-					memcpy((char*)mArrTableData[row][col].item_data \
-						+ sizeof('+') + sizeof(' ') \
-						+ mpiItemLength[0][col] * sizeof(char) + sizeof(' '),
-						"+\0",
-						sizeof('+') + sizeof('\0'));
-				}
-			}
-			else { // 最后一行一定是边界，故 row 不会越界
-				size_t remain = 2 * sizeof(' ') + (mpiItemLength[0][col] - mpiItemLength[row][col] > 0 ? \
-					mpiItemLength[0][col] - mpiItemLength[row][col] : 0);
-				//printf("len: %u \tremain: %u\n", mpiItemLength[row][col], remain);
-
-				memset(mArrTableData[row][col].item_data,
-					0,
-					(mArrTableData[row][col].item_size + boundary_extra) * sizeof(char));
-
-				memcpy((char*)mArrTableData[row][col].item_data,
-					"|",
-					sizeof('|'));
-
-				for (int i = 0; i < (remain >> 1); i++) {
-					memcpy((char*)mArrTableData[row][col].item_data + sizeof('|') + i * sizeof(' '),
-						" ",
-						sizeof(' '));
-				}
-
-				memcpy((char*)mArrTableData[row][col].item_data \
-					+ sizeof('|') + (remain >> 1) * sizeof(' '),
-					rowData[col],
-					mpiItemLength[row][col] * sizeof(char));
-
-				for (int i = 0; i < remain - (remain >> 1); i++) {
-					memcpy((char*)mArrTableData[row][col].item_data \
-						+ sizeof('|') + (remain >> 1) * sizeof(' ') \
-						+ mpiItemLength[row][col] * sizeof(char) + i * sizeof(' '),
-						" ",
-						sizeof(' '));
-				}
-
-				if (col == miItems - 1) {
-					memcpy((char*)mArrTableData[row][col].item_data \
-						+ sizeof('|') + (remain >> 1) * sizeof(' ') \
-						+ mpiItemLength[0][col] * sizeof(char) \
-						+ (remain - (remain >> 1)) * sizeof(' '),
-						"|\0",
-						sizeof('|') + sizeof('\0'));
-				}
-			}
-		}  // end for loop col
-	} // end for loop row
-}
-
-void PrettyTable::updateTable(const char *rowData[])
-{
-	// TODO(tangxuan): 表格结构自适应最长字符串表项
-	// 使用 mpiItemLength[0] 记录最大值
-	for (int row = 3; row < miRows; row += 2) { // 找最大值的过程可优化？
-		for (int col = 0; col < miItems; col++) {
-			mpiItemLength[0][col] = mpiItemLength[row][col] > mpiItemLength[row - 2][col] ? \
-				mpiItemLength[row][col] : mpiItemLength[row - 2][col];
-		}
-	}
-
-	/*for (int col = 0; col < miItems; col++) {
-	printf("%d\t", mpiItemLength[0][col]);
-	}*/
-
-	for (int row = 0; row < miRows; row++) {
-		for (int col = 0; col < miItems; col++) {
-			mArrTableData[row][col].item_size = sizeof('|') + sizeof(' ') \
-				+ mpiItemLength[0][col] + sizeof(' ') + sizeof('\0'); // 更新为每列最长那个iteam首尾各添一个空格，首部一个'|'，字符串尾部'\0'
 		}
 	}
 }
+
 
 void PrettyTable::printTable(const char *filename)
 {
-	showTable();
-	for (int row = 1; row < miRows; row++) {
-		for (int col = 0; col < miItems; col++) {
-			printf("%s", (char*)mArrTableData[row][col].item_data);
-		}
-		printf("\n");
+	FILE *fp = nullptr;
+
+	if (filename) {
+		fp = fopen(filename, "w");
 	}
+
+	if (fp == nullptr) {
+		fp = stdout;
+	}
+
+	showTable(fp);
+	if (filename && fp) {
+		fclose(fp);
+		fp = nullptr;
+	}
+	//TODO: save to file
 }

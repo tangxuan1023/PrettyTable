@@ -81,6 +81,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -110,9 +111,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ArgsParser.h" />
+    <ClInclude Include="basic_defs.h" />
     <ClInclude Include="PrettyTable.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ArgsParser.cpp" />
+    <ClCompile Include="CmdLineTools.cpp" />
     <ClCompile Include="PrettyTable.cpp" />
     <ClCompile Include="testTable.cpp" />
   </ItemGroup>
